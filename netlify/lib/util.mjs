@@ -66,7 +66,10 @@ export async function activarPago(paymentId, emailEsperado = null) {
   const email = String(p.external_reference || "").toLowerCase();
   if (!email) return { activado: false, motivo: "sin_referencia" };
   if (emailEsperado && email !== emailEsperado) return { activado: false, motivo: "otro_usuario" };
-  if (p.status !== "approved") return { activado: false, motivo: "estado_" + p.status, email };
+  if (p.status !== "approved") {
+    console.log("Pago no aprobado", p.id, p.status, p.status_detail, p.payment_method_id, p.transaction_amount);
+    return { activado: false, motivo: "estado_" + p.status, detalle: p.status_detail || null, metodo: p.payment_method_id || null, email };
+  }
   const minimo = Math.min(PRECIO(), PRECIO_ALERTA());
   if (p.currency_id !== "PEN" || Number(p.transaction_amount) < minimo) return { activado: false, motivo: "monto", email };
 
