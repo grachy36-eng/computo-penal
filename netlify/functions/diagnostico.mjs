@@ -1,5 +1,5 @@
 // Revisión temporal del estado de la cuenta de Mercado Pago (sin datos secretos).
-import { json, env } from "../lib/util.mjs";
+import { json, env, leer } from "../lib/util.mjs";
 
 export default async (req) => {
   if (new URL(req.url).searchParams.get("preferencia") === "1") return preferenciaDePrueba();
@@ -14,7 +14,11 @@ export default async (req) => {
   try {
     const s = await fetch("https://api.mercadopago.com/v1/payments/search?sort=date_created&criteria=desc&limit=10", { headers: { Authorization: "Bearer " + tok } });
     const d = await s.json();
-    intentos = (d.results || []).map((p) => ({ fecha: p.date_created, estado: p.status, motivo: p.status_detail, medio: p.payment_method_id, tipo: p.payment_type_id, monto: p.transaction_amount }));
+    intentos = await Promise.all((d.results || []).map(async (p) => {
+      let acceso = null;
+      try { const u = p.external_reference && p.external_reference !== "diagnostico" ? await leer(String(p.external_reference).toLowerCase()) : null; acceso = u ? { pago_registrado: (u.pagos || []).includes(String(p.id)), activo_hasta: u.pagadoHasta } : null; } catch (e) { acceso = "error"; }
+      return { fecha: p.date_created, estado: p.status, motivo: p.status_detail, medio: p.payment_method_id, tipo: p.payment_type_id, monto: p.transaction_amount, acceso };
+    }));
   } catch (e) { intentos = "error: " + e.message; }
   return json({
     intentos,
