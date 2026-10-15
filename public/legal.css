@@ -1,0 +1,9 @@
+:root{--bg:#f4f5f7;--ink:#1a1e26;--muted:#5a6170;--accent:#8a1c2b}
+@media (prefers-color-scheme:dark){:root{--bg:#121419;--ink:#e8eaee;--muted:#9ba2ae;--accent:#e58a95;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:68ch;margin:0 auto;padding:32px max(16px,env(safe-area-inset-left,0px)) 56px}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:32px;line-height:1.2;margin:8px 0 4px}
+h2{font-size:18px;margin:28px 0 6px}
+.fecha{color:var(--muted);font-size:14px;margin:0 0 20px}
+a{color:var(--accent)}
+li{margin:4px 0}
