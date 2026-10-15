@@ -1,7 +1,8 @@
 // Revisión temporal del estado de la cuenta de Mercado Pago (sin datos secretos).
 import { json, env } from "../lib/util.mjs";
 
-export default async () => {
+export default async (req) => {
+  if (new URL(req.url).searchParams.get("preferencia") === "1") return preferenciaDePrueba();
   const tok = env("MP_ACCESS_TOKEN", "");
   const tipo = tok.startsWith("TEST-") ? "TEST" : tok.startsWith("APP_USR-") ? "APP_USR" : (tok ? "otro" : "vacío");
   if (!tok) return json({ token: tipo });
@@ -29,3 +30,32 @@ export default async () => {
 };
 
 export const config = { path: "/api/diagnostico" };
+
+// Crea una preferencia de prueba (no cobra nada) y muestra la respuesta sin datos personales.
+async function preferenciaDePrueba() {
+  const tok = env("MP_ACCESS_TOKEN", "");
+  const base = env("URL", "https://computo-penal.netlify.app");
+  const body = {
+    items: [{ id: "computo-penal-30d", title: "Cómputo Penal: acceso por 30 días", quantity: 1, unit_price: 1, currency_id: "PEN" }],
+    external_reference: "diagnostico",
+    notification_url: `${base}/api/webhook`,
+    back_urls: { success: `${base}/?pago=ok`, pending: `${base}/?pago=pendiente`, failure: `${base}/?pago=error` },
+    auto_return: "approved",
+    statement_descriptor: "COMPUTOPENAL",
+  };
+  const r = await fetch("https://api.mercadopago.com/checkout/preferences", {
+    method: "POST",
+    headers: { Authorization: "Bearer " + tok, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const d = await r.json();
+  return json({
+    http_status: r.status,
+    id: d.id, collector_id: d.collector_id, client_id: d.client_id, site_id: d.site_id,
+    operation_type: d.operation_type, date_created: d.date_created,
+    items: d.items, payment_methods: d.payment_methods, binary_mode: d.binary_mode,
+    auto_return: d.auto_return, back_urls: d.back_urls, notification_url: d.notification_url,
+    statement_descriptor: d.statement_descriptor, init_point: d.init_point,
+    error: d.error || null, message: d.message || null, cause: d.cause || null,
+  });
+}
