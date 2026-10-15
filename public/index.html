@@ -111,6 +111,7 @@ footer a{color:var(--accent)}
     <h2>Suscríbete a Cómputo Penal</h2>
     <p class="hint" id="pw-motivo"></p>
     <div class="big"><span class="k">Cálculos ilimitados por 30 días</span><span class="v" id="pw-precio">S/ 9</span><span class="hint">Paga con Yape, tarjeta de débito o de crédito a través de Mercado Pago. No es un cobro automático: antes de que venza te avisamos para que renueves.</span></div>
+    <p class="note"><b>¿Pagas con Yape?</b> Antes, activa <b>"Compras por Internet y POS"</b> en los ajustes de tu app de Yape. Luego usa el <b>código de aprobación</b> de 6 dígitos (cambia cada 2 minutos) o aprueba desde la notificación de Yape.</p>
     <div class="field"><label for="pw-cupon">¿Eres suscriptor de Alerta Legal? Ingresa tu código de descuento</label><input id="pw-cupon" autocomplete="off" placeholder="Opcional"></div>
     <button type="button" class="cta" id="pw-pagar">Pagar con Mercado Pago</button>
     <span class="hint" id="pw-msg" role="status"></span>
@@ -567,7 +568,7 @@ async function trasPago(){
     }
     aviso('Recibimos tu pago, pero aún no se activa. Recarga la página en unos minutos; si sigue igual, escríbenos.');
   } else if(st==='pendiente') aviso('Tu pago está pendiente de confirmación. Tu suscripción se activará sola cuando Mercado Pago lo apruebe.');
-  else aviso('El pago no se completó. Puedes intentarlo de nuevo.');
+  else aviso('El pago no se completó. Si usaste Yape, revisa que tengas activada la opción "Compras por Internet y POS" en los ajustes de tu app y vuelve a intentarlo.');
 }
 
 async function iniciar(){
