@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cómputo Penal</title>
+<meta name="description" content="Calculadora de prescripción de la acción penal, plazos de recursos en días hábiles y plazos de investigación y prisión preventiva en Perú.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%238a1c2b'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Georgia'%3E%C2%A7%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Layout: herramienta de dos columnas (datos | resultado) con pestañas por tipo de cómputo; una columna en móvil */
+:root{
+  --bg:#f4f5f7; --surface:#ffffff; --ink:#1a1e26; --muted:#5a6170; --line:#dce0e6;
+  --accent:#8a1c2b; --accent-soft:#f7e7e9; --ok:#1d6a44; --ok-soft:#e3f2ea; --warn:#8f5400; --warn-soft:#fbf0dc; --bad:#b0261d; --bad-soft:#fbe6e4;
+  --f-display:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121419; --surface:#1b1e25; --ink:#e8eaee; --muted:#9ba2ae; --line:#2d323c;
+  --accent:#e58a95; --accent-soft:#3a2026; --ok:#74d3a1; --ok-soft:#173327; --warn:#f2b85a; --warn-soft:#3a2c13; --bad:#ff8f86; --bad-soft:#3d1c1a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121419; --surface:#1b1e25; --ink:#e8eaee; --muted:#9ba2ae; --line:#2d323c;
+  --accent:#e58a95; --accent-soft:#3a2026; --ok:#74d3a1; --ok-soft:#173327; --warn:#f2b85a; --warn-soft:#3a2c13; --bad:#ff8f86; --bad-soft:#3d1c1a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:4px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+h1{font-family:var(--f-display);font-size:clamp(28px,5vw,38px);line-height:1.1;margin:0;text-wrap:balance}
+header p{margin:0;color:var(--muted);max-width:62ch}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{font:inherit;font-weight:500;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:10px 14px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:focus-visible,input:focus-visible,select:focus-visible,.chk input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:start}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-family:var(--f-display);font-size:20px;margin:0}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.lbl{font-size:13px;font-weight:600}
+.hint{font-size:12.5px;color:var(--muted)}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:9px 10px;width:100%}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chk{display:flex;gap:9px;align-items:flex-start;font-size:14px}
+.chk input{width:auto;margin-top:4px}
+.sample{font-size:12px;background:var(--warn-soft);color:var(--warn);padding:6px 10px;border-radius:6px}
+.big{display:flex;flex-direction:column;gap:2px;padding:16px;border-radius:8px;background:var(--accent-soft)}
+.big .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;color:var(--accent)}
+.big .v{font-family:var(--f-display);font-size:clamp(22px,4vw,28px);font-weight:700;line-height:1.2}
+.pill{display:inline-block;font-size:12.5px;font-weight:600;padding:3px 10px;border-radius:99px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.lines{display:flex;flex-direction:column}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:baseline}
+.line:first-child{border-top:0}
+.line .d{font-size:13px;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13.5px;text-align:right}
+.note{font-size:13px;padding:10px 12px;border-radius:7px;background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+.steps{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.days{display:flex;flex-wrap:wrap;gap:6px}
+.day{font-family:var(--f-mono);font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--line)}
+.day.h{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.day.x{color:var(--muted);text-decoration:line-through}
+footer{font-size:12.5px;color:var(--muted);max-width:75ch}
+.disp{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.disp-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.row3{display:grid;grid-template-columns:1.3fr .8fr .9fr;gap:10px}
+@media (max-width:420px){.row3{grid-template-columns:1fr 1fr}.row3 .field:first-child{grid-column:1/-1}}
+.btn{font:inherit;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px dashed var(--accent);border-radius:7px;padding:9px 12px;cursor:pointer}
+.link{font:inherit;font-size:13px;color:var(--muted);background:none;border:0;cursor:pointer;text-decoration:underline}
+.btn:focus-visible,.link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.line.anul{opacity:.6}
+.line.anul .mono{text-decoration:line-through}
+@media (prefers-reduced-motion:no-preference){.panel{transition:border-color .15s}}
+:root{--on-accent:#ffffff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--on-accent:#1a1e26}}
+:root[data-theme="dark"]{--on-accent:#1a1e26}
+.cuenta{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+.cuenta .est{font-size:14px;min-width:0;overflow-wrap:anywhere}
+.cuenta .acc{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.cta{font:inherit;font-weight:600;color:var(--on-accent);background:var(--accent);border:0;border-radius:7px;padding:10px 16px;cursor:pointer}
+.cta:disabled{opacity:.6;cursor:wait}
+.cta:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.calc{width:100%;padding:12px 16px;font-size:15px}
+#paywall{border-color:var(--accent)}
+#aviso{font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Perú · Código Penal y Código Procesal Penal</span>
+    <h1>Cómputo Penal</h1>
+    <p>Prescripción de la acción penal, plazos de recursos en días hábiles y plazos de investigación y prisión preventiva. Normas revisadas a octubre de 2026.</p>
+  </header>
+
+  <div class="cuenta" id="cuenta" aria-live="polite">
+    <div class="est" id="cuenta-est">Cargando tu cuenta…</div>
+    <div class="acc">
+      <div id="g-btn"></div>
+      <button type="button" class="cta" id="btn-sub" hidden>Suscribirme por S/ 9 al mes</button>
+      <button type="button" class="link" id="btn-salir" hidden>Salir</button>
+    </div>
+  </div>
+  <div class="note" id="aviso" hidden></div>
+
+  <section class="panel" id="paywall" hidden>
+    <h2>Suscríbete a Cómputo Penal</h2>
+    <p class="hint" id="pw-motivo"></p>
+    <div class="big"><span class="k">Cálculos ilimitados por 30 días</span><span class="v" id="pw-precio">S/ 9</span><span class="hint">Paga con Yape, tarjeta de débito o de crédito a través de Mercado Pago. No es un cobro automático: antes de que venza te avisamos para que renueves.</span></div>
+    <div class="field"><label for="pw-cupon">¿Eres suscriptor de Alerta Legal? Ingresa tu código de descuento</label><input id="pw-cupon" autocomplete="off" placeholder="Opcional"></div>
+    <button type="button" class="cta" id="pw-pagar">Pagar con Mercado Pago</button>
+    <span class="hint" id="pw-msg" role="status"></span>
+    <button type="button" class="link" id="pw-cerrar">Ahora no</button>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="t-pres" aria-selected="true" data-tab="pres">Prescripción</button>
+    <button role="tab" id="t-rec" aria-selected="false" data-tab="rec">Recursos</button>
+    <button role="tab" id="t-inv" aria-selected="false" data-tab="inv">Investigación y prisión preventiva</button>
+  </nav>
+
+  <!-- PRESCRIPCIÓN -->
+  <section class="grid" id="tab-pres">
+    <form class="panel" id="f-pres" autocomplete="off">
+      <h2>Datos del caso</h2>
+      <span class="sample" id="sample-pres">Datos de ejemplo. Reemplázalos con los de tu caso.</span>
+      <div class="field">
+        <label for="p-forma">Forma del delito (art. 82 CP)</label>
+        <select id="p-forma">
+          <option value="inst">Instantáneo o consumado</option>
+          <option value="tent">Tentativa</option>
+          <option value="cont">Continuado</option>
+          <option value="perm">Permanente</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="p-fecha" id="p-fecha-lbl">Fecha de consumación</label>
+        <input type="date" id="p-fecha" value="2019-03-15">
+      </div>
+      <div class="field">
+        <label for="p-tipo">Pena conminada</label>
+        <select id="p-tipo">
+          <option value="priv">Privativa de libertad temporal</option>
+          <option value="perp">Cadena perpetua</option>
+          <option value="nopriv">No privativa de libertad (multa, prestación de servicios, etc.)</option>
+          <option value="impr">Delito imprescriptible</option>
+        </select>
+      </div>
+      <div class="row" id="p-pena-row">
+        <div class="field"><label for="p-anios">Máximo legal (años)</label><input type="number" id="p-anios" min="0" step="1" value="6" inputmode="numeric"></div>
+        <div class="field"><label for="p-meses">y meses</label><input type="number" id="p-meses" min="0" max="11" step="1" value="0" inputmode="numeric"></div>
+      </div>
+      <div class="field">
+        <label for="p-agrav">Supuesto que duplica el plazo (art. 80 CP)</label>
+        <select id="p-agrav">
+          <option value="no">Ninguno</option>
+          <option value="func">Funcionario o servidor público contra el patrimonio del Estado</option>
+          <option value="org">Cometido como integrante de organización criminal</option>
+          <option value="oaf">Omisión de asistencia familiar</option>
+        </select>
+      </div>
+      <label class="chk"><input type="checkbox" id="p-edad"> <span>El imputado tenía menos de 21 o más de 65 años al momento del hecho (art. 81 CP: el plazo se reduce a la mitad)</span></label>
+      <div class="field">
+        <label for="p-form">Fecha de formalización de la investigación preparatoria</label>
+        <input type="date" id="p-form" value="2021-06-10">
+        <span class="hint">Opcional. Activa la suspensión de hasta un año (art. 84 CP y art. 339.1 CPP, modificados por la Ley 31751).</span>
+      </div>
+      <button type="submit" class="cta calc">Calcular</button>
+    </form>
+    <div class="panel" id="r-pres" aria-live="polite"></div>
+  </section>
+
+  <!-- RECURSOS -->
+  <section class="grid" id="tab-rec" hidden>
+    <form class="panel" id="f-rec" autocomplete="off">
+      <h2>Plazo para impugnar</h2>
+      <span class="sample">Datos de ejemplo. Reemplázalos con los de tu caso.</span>
+      <div class="field">
+        <label for="r-tipo">Recurso (art. 414 CPP)</label>
+        <select id="r-tipo">
+          <option value="2|Reposición|art. 414.1.d CPP">Reposición: 2 días</option>
+          <option value="3|Apelación de auto|art. 414.1.c CPP" selected>Apelación de auto: 3 días</option>
+          <option value="5|Apelación de sentencia|art. 414.1.b CPP">Apelación de sentencia: 5 días</option>
+          <option value="10|Casación|art. 414.1.a CPP">Casación: 10 días</option>
+          <option value="3|Queja de derecho|art. 438 CPP">Queja de derecho: 3 días</option>
+          <option value="otro">Otro plazo en días hábiles</option>
+        </select>
+      </div>
+      <div class="field" id="r-otro-f" hidden>
+        <label for="r-otro">Número de días hábiles</label>
+        <input type="number" id="r-otro" min="1" step="1" value="3" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="r-forma">Forma de notificación</label>
+        <select id="r-forma">
+          <option value="elec" selected>Casilla electrónica</option>
+          <option value="aud">En audiencia o en forma presencial</option>
+        </select>
+        <span class="hint" id="r-forma-h"></span>
+      </div>
+      <div class="field">
+        <label for="r-not" id="r-not-lbl">Fecha de ingreso a la casilla electrónica</label>
+        <input type="date" id="r-not" value="2026-10-06">
+      </div>
+      <label class="chk"><input type="checkbox" id="r-juez" checked> <span>Tratar el Día del Juez (4 de agosto) como inhábil</span></label>
+      <button type="submit" class="cta calc">Calcular</button>
+    </form>
+    <div class="panel" id="r-rec" aria-live="polite"></div>
+  </section>
+
+  <!-- INVESTIGACIÓN -->
+  <section class="grid" id="tab-inv" hidden>
+    <form class="panel" id="f-inv" autocomplete="off">
+      <h2>Plazo procesal</h2>
+      <span class="sample">Datos de ejemplo. Reemplázalos con los de tu caso.</span>
+      <div class="field">
+        <label for="i-tipo">Etapa o medida</label>
+        <select id="i-tipo">
+          <option value="dp" selected>Diligencias preliminares (art. 334.2 CPP)</option>
+          <option value="ip">Investigación preparatoria (art. 342 CPP)</option>
+          <option value="pp">Prisión preventiva (art. 272 CPP)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="i-comp" id="i-comp-lbl">Tipo de proceso</label>
+        <select id="i-comp">
+          <option value="c">Común</option>
+          <option value="x">Complejo</option>
+          <option value="o">Criminalidad organizada</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="i-ini" id="i-ini-lbl">Fecha de inicio</label>
+        <input type="date" id="i-ini" value="2026-06-01">
+      </div>
+      <label class="chk" id="i-pro-w"><input type="checkbox" id="i-pro"> <span>Incluir la prórroga máxima</span></label>
+      <div id="dp-w" class="field" style="gap:12px">
+        <div class="row">
+          <div class="field"><label for="dp-n">Plazo de la disposición de inicio</label><input type="number" id="dp-n" min="1" step="1" value="60" inputmode="numeric"></div>
+          <div class="field"><label for="dp-u">Unidad</label><select id="dp-u"><option value="d" selected>días</option><option value="m">meses</option></select></div>
+        </div>
+        <span class="lbl">Disposiciones posteriores</span>
+        <span class="hint">Ampliaciones del plazo o recalificación como compleja. Cada ampliación se suma desde el vencimiento del plazo anterior.</span>
+        <div id="dp-rows" class="field" style="gap:12px"></div>
+        <button type="button" id="dp-add" class="btn">Agregar disposición</button>
+      </div>
+      <button type="submit" class="cta calc">Calcular</button>
+    </form>
+    <div class="panel" id="r-inv" aria-live="polite"></div>
+  </section>
+
+  <footer>Herramienta de apoyo para el cómputo de plazos. No reemplaza la revisión del expediente ni constituye asesoría legal. No considera días no laborables decretados después de octubre de 2026, suspensiones del despacho judicial ni criterios jurisprudenciales particulares de cada caso.<br><br>Privacidad: los datos de tus casos se calculan en tu navegador y no se envían ni se guardan. Solo guardamos tu correo, cuántos cálculos usaste en el mes y la vigencia de tu suscripción. <span id="contacto"></span></footer>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script>
+// ---------- utilidades de fecha (UTC para evitar desfases de zona horaria)
+const D = s => { if(!s) return null; const [y,m,d] = s.split('-').map(Number); return new Date(Date.UTC(y,m-1,d)); };
+const iso = d => d.toISOString().slice(0,10);
+const addDays = (d,n) => new Date(d.getTime() + n*864e5);
+const addMonths = (d,n) => { const y=d.getUTCFullYear(), m=d.getUTCMonth()+n, day=d.getUTCDate(); const last=new Date(Date.UTC(y,m+1,0)).getUTCDate(); return new Date(Date.UTC(y,m,Math.min(day,last))); };
+const addYearsFrac = (d,years) => { const months=years*12; const w=Math.floor(months+1e-9); return addDays(addMonths(d,w), Math.round((months-w)*30)); };
+const diffDays = (a,b) => Math.round((b-a)/864e5);
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
+const largo = d => `${DIAS[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+const corto = d => `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${d.getUTCFullYear()}`;
+const hoy = D(iso(new Date(Date.now() - 5*3600e3))); // hora de Lima
+function fmtAnios(y){
+  const totalM = Math.round(y*12*1000)/1000; const a=Math.floor(totalM/12+1e-9); const m=Math.floor(totalM-a*12+1e-9); const dd=Math.round((totalM-a*12-m)*30);
+  const p=[]; if(a) p.push(a+(a===1?' año':' años')); if(m) p.push(m+(m===1?' mes':' meses')); if(dd) p.push(dd+(dd===1?' día':' días'));
+  return p.length? p.join(', ').replace(/, ([^,]*)$/,' y $1') : '0 días';
+}
+function restante(fin){
+  const n = diffDays(hoy, fin);
+  if(n < 0) return `<span class="pill bad">Vencido hace ${-n} ${-n===1?'día':'días'}</span>`;
+  if(n === 0) return `<span class="pill warn">Vence hoy</span>`;
+  return `<span class="pill ${n<=30?'warn':'ok'}">Faltan ${n} ${n===1?'día':'días'}</span>`;
+}
+const $ = id => document.getElementById(id);
+
+// ---------- feriados nacionales (Perú)
+const FIJOS = {'01-01':'Año Nuevo','05-01':'Día del Trabajo','06-07':'Batalla de Arica y Día de la Bandera','06-29':'San Pedro y San Pablo','07-23':'Día de la Fuerza Aérea','07-28':'Fiestas Patrias','07-29':'Fiestas Patrias','08-06':'Batalla de Junín','08-30':'Santa Rosa de Lima','10-08':'Combate de Angamos','11-01':'Todos los Santos','12-08':'Inmaculada Concepción','12-09':'Batalla de Ayacucho','12-25':'Navidad'};
+const MOVIBLES = {'2025-04-17':'Jueves Santo','2025-04-18':'Viernes Santo','2026-04-02':'Jueves Santo','2026-04-03':'Viernes Santo','2027-03-25':'Jueves Santo','2027-03-26':'Viernes Santo','2028-04-13':'Jueves Santo','2028-04-14':'Viernes Santo'};
+function motivoInhabil(d, juez){
+  const w=d.getUTCDay(); if(w===0) return 'domingo'; if(w===6) return 'sábado';
+  const k=iso(d); if(MOVIBLES[k]) return MOVIBLES[k];
+  const md=k.slice(5); if(FIJOS[md]) return FIJOS[md];
+  if(juez && md==='08-04') return 'Día del Juez';
+  return null;
+}
+
+// ---------- PRESCRIPCIÓN
+function calcPrescripcion(o){
+  const pasos=[], avisos=[];
+  if(o.tipo==='impr') return {impr:true};
+  let base;
+  if(o.tipo==='perp'){ base=30; pasos.push('Delito con cadena perpetua: 30 años (art. 80 CP).'); }
+  else if(o.tipo==='nopriv'){ base=2; pasos.push('Pena no privativa de libertad: 2 años (art. 80 CP).'); }
+  else {
+    const p = o.anios + o.meses/12;
+    pasos.push(`Máximo legal de la pena: ${fmtAnios(p)}.`);
+    base = p;
+    if(p>20){ base=20; pasos.push('Se aplica el tope de 20 años (art. 80 CP).'); }
+  }
+  if(o.agrav!=='no'){ base*=2; pasos.push({func:'Funcionario contra el patrimonio del Estado',org:'Integrante de organización criminal',oaf:'Omisión de asistencia familiar'}[o.agrav]+`: el plazo se duplica a ${fmtAnios(base)} (art. 80 CP).`); }
+  if(o.edad){ base/=2; pasos.push(`Responsabilidad restringida por edad: el plazo se reduce a la mitad, ${fmtAnios(base)} (art. 81 CP).`); }
+  const ord=base, ext=base*1.5;
+  const fOrd=addYearsFrac(o.fecha,ord), fExt=addYearsFrac(o.fecha,ext);
+  pasos.push(`Plazo extraordinario: ordinario más la mitad, ${fmtAnios(ext)} (art. 83 CP).`);
+  let fSusp=null;
+  if(o.form){
+    if(o.form < o.fecha) avisos.push('La fecha de formalización es anterior a la del hecho. Revisa las fechas.');
+    else if(o.form > fExt) avisos.push('La formalización sería posterior al vencimiento del plazo extraordinario: la acción ya habría prescrito y la suspensión no la revive.');
+    else {
+      fSusp = addMonths(fExt,12);
+      pasos.push('Formalización de la investigación: suspensión máxima de 1 año (art. 84 CP y art. 339.1 CPP, Ley 31751).');
+      if(o.form > fOrd) avisos.push('La formalización es posterior al vencimiento del plazo ordinario. Solo cuenta si antes hubo actuaciones que interrumpieron la prescripción; si no las hubo, la acción prescribió el '+corto(fOrd)+'.');
+    }
+  }
+  const totalAnios = ext + (fSusp?1:0);
+  if(o.tipo!=='perp' && o.agrav==='no' && totalAnios>20) avisos.push('El cómputo supera los 20 años. Según la sentencia del Tribunal Constitucional de enero de 2026 sobre la Ley 31751, el tope de 20 años alcanzaría también al plazo extraordinario y a la suspensión; la Corte Suprema venía aplicando otro criterio. Verifica la posición vigente para tu caso.');
+  return {ord,ext,fOrd,fExt,fSusp,pasos,avisos,final:fSusp||fExt};
+}
+const LBL_FECHA={inst:'Fecha de consumación',tent:'Fecha en que cesó la actividad delictiva (tentativa)',cont:'Fecha en que terminó la actividad delictiva (delito continuado)',perm:'Fecha en que cesó la permanencia'};
+function renderPres(){
+  $('p-fecha-lbl').textContent = LBL_FECHA[$('p-forma').value];
+  const tipo=$('p-tipo').value; $('p-pena-row').hidden = tipo!=='priv';
+  const fecha=D($('p-fecha').value), out=$('r-pres');
+  if(!fecha){ out.innerHTML='<h2>Resultado</h2><p class="hint">Ingresa la fecha del hecho para calcular.</p>'; return; }
+  const r=calcPrescripcion({fecha,tipo,anios:+$('p-anios').value||0,meses:+$('p-meses').value||0,agrav:$('p-agrav').value,edad:$('p-edad').checked,form:D($('p-form').value)});
+  if(r.impr){ out.innerHTML=`<h2>Resultado</h2><div class="big"><span class="k">Acción penal</span><span class="v">Imprescriptible</span></div><p class="hint">Por ejemplo, delitos contra la libertad sexual de menores y otros supuestos previstos en el art. 88-A del Código Penal, o delitos de lesa humanidad. Confirma que el delito y la fecha de los hechos estén comprendidos en la norma.</p>`; return; }
+  const finalEstado = diffDays(hoy,r.final)<0 ? '<span class="pill bad">Prescrita a la fecha</span>' : restante(r.final);
+  out.innerHTML = `<h2>Resultado</h2>
+  <div class="big"><span class="k">Fecha límite de la acción penal</span><span class="v">${largo(r.final)}</span><span>${finalEstado}</span></div>
+  <div class="lines">
+    <div class="line"><div>Prescripción ordinaria<div class="d">${fmtAnios(r.ord)}, sin actos que la interrumpan</div></div><div class="mono">${corto(r.fOrd)}<br>${restante(r.fOrd)}</div></div>
+    <div class="line"><div>Prescripción extraordinaria<div class="d">${fmtAnios(r.ext)}, si hubo interrupción</div></div><div class="mono">${corto(r.fExt)}<br>${restante(r.fExt)}</div></div>
+    ${r.fSusp?`<div class="line"><div>Con suspensión por formalización<div class="d">Extraordinaria más 1 año (Ley 31751)</div></div><div class="mono">${corto(r.fSusp)}<br>${restante(r.fSusp)}</div></div>`:''}
+  </div>
+  ${r.avisos.map(a=>`<div class="note">${a}</div>`).join('')}
+  <div><span class="lbl">Cómo se calculó</span><ol class="steps">${r.pasos.map(p=>`<li>${p}</li>`).join('')}</ol></div>`;
+}
+
+// ---------- RECURSOS
+function siguienteHabil(d, juez){ let x=addDays(d,1); while(motivoInhabil(x,juez)) x=addDays(x,1); return x; }
+function calcHabiles(not, n, juez, elec){
+  let efectos = not;
+  if(elec){ efectos = siguienteHabil(siguienteHabil(not,juez),juez); }
+  const dias=[]; let d=addDays(efectos,1), c=0;
+  while(c<n){ const m=motivoInhabil(d,juez); if(m) dias.push({d,m}); else { c++; dias.push({d,n:c}); } if(c<n) d=addDays(d,1); }
+  return {vence:d,dias,efectos};
+}
+function renderRec(){
+  const v=$('r-tipo').value; $('r-otro-f').hidden = v!=='otro';
+  let n,nombre,base; if(v==='otro'){ n=Math.max(1,+$('r-otro').value||1); nombre='Plazo'; base='días hábiles'; } else { [n,nombre,base]=v.split('|'); n=+n; }
+  const not=D($('r-not').value), out=$('r-rec');
+  if(!not){ out.innerHTML='<h2>Resultado</h2><p class="hint">Ingresa la fecha de notificación.</p>'; return; }
+  const elec = $('r-forma').value==='elec';
+  $('r-not-lbl').textContent = elec ? 'Fecha de ingreso a la casilla electrónica' : 'Fecha de notificación';
+  $('r-forma-h').textContent = elec ? 'Surte efectos el segundo día hábil siguiente a su ingreso (art. 155-C LOPJ); el plazo corre desde el día hábil siguiente.' : 'El plazo corre desde el día hábil siguiente a la notificación.';
+  const r=calcHabiles(not,n,$('r-juez').checked,elec);
+  const salt=r.dias.filter(x=>x.m && !/sábado|domingo/.test(x.m));
+  out.innerHTML=`<h2>Resultado</h2>
+  <div class="big"><span class="k">${nombre}: ${n} ${n===1?'día hábil':'días hábiles'} · ${base}</span><span class="v">Vence el ${largo(r.vence)}</span><span>${restante(r.vence)}</span></div>
+  ${elec?`<div class="lines"><div class="line"><div>Ingreso a la casilla</div><div class="mono">${corto(not)}</div></div><div class="line"><div>Surte efectos<div class="d">2.º día hábil siguiente (art. 155-C LOPJ)</div></div><div class="mono">${corto(r.efectos)}</div></div><div class="line"><div>Primer día del plazo</div><div class="mono">${corto(siguienteHabil(r.efectos,$('r-juez').checked))}</div></div></div>`:''}
+  <div><span class="lbl">Días del plazo${elec?'':' desde la notificación del '+corto(not)}</span></div>
+  <div class="days">${r.dias.map(x=>x.m?`<span class="day x" title="${x.m}">${corto(x.d).slice(0,5)}</span>`:`<span class="day h">${corto(x.d).slice(0,5)} · día ${x.n}</span>`).join('')}</div>
+  ${salt.length?`<div class="note">No se contaron: ${salt.map(x=>`${corto(x.d)} (${x.m})`).join(', ')}.</div>`:''}
+  <p class="hint">Revisa el calendario del Poder Judicial: los días no laborables declarados por decreto y las suspensiones de despacho también se excluyen.</p>`;
+}
+
+// ---------- INVESTIGACIÓN Y PRISIÓN PREVENTIVA
+const PLAZOS = {
+  dp:{c:{n:60,u:'d'},x:{n:8,u:'m'},o:{n:36,u:'m'},art:'art. 334.2 CPP',ini:'Fecha de la disposición de inicio de diligencias preliminares'},
+  ip:{c:{n:120,u:'d',p:60},x:{n:8,u:'m',p:8},o:{n:36,u:'m',p:36},art:'art. 342 CPP',ini:'Fecha de formalización de la investigación preparatoria'},
+  pp:{c:{n:9,u:'m'},x:{n:18,u:'m'},o:{n:36,u:'m'},art:'art. 272 CPP',ini:'Fecha de inicio de la detención'}
+};
+const txtPlazo = (n,u) => n+' '+(u==='d'?(n===1?'día':'días'):(n===1?'mes':'meses'));
+function renderInv(){
+  const t=$('i-tipo').value, c=$('i-comp').value, cfg=PLAZOS[t], pl=cfg[c];
+  $('i-ini-lbl').textContent=cfg.ini; $('i-pro-w').hidden = !pl.p || t==='dp'; $('dp-w').hidden = t!=='dp';
+  $('i-comp-lbl').textContent = t==='dp' ? 'Calificación inicial' : 'Tipo de proceso';
+  if(t==='dp') return renderDP();
+  const ini=D($('i-ini').value), out=$('r-inv');
+  if(!ini){ out.innerHTML='<h2>Resultado</h2><p class="hint">Ingresa la fecha de inicio.</p>'; return; }
+  const sum=(d,n,u)=>u==='d'?addDays(d,n):addMonths(d,n);
+  const fin=sum(ini,pl.n,pl.u); const pro = pl.p && $('i-pro').checked;
+  const finPro = pro? sum(fin,pl.p,pl.u) : null;
+  const nombre={dp:'Diligencias preliminares',ip:'Investigación preparatoria',pp:'Prisión preventiva'}[t];
+  out.innerHTML=`<h2>Resultado</h2>
+  <div class="big"><span class="k">${nombre} · ${txtPlazo(pl.n,pl.u)} · ${cfg.art}</span><span class="v">Vence el ${largo(finPro||fin)}</span><span>${restante(finPro||fin)}</span></div>
+  <div class="lines">
+    <div class="line"><div>Plazo inicial<div class="d">${txtPlazo(pl.n,pl.u)} calendario desde el ${corto(ini)}</div></div><div class="mono">${corto(fin)}</div></div>
+    ${pro?`<div class="line"><div>Con prórroga máxima<div class="d">+ ${txtPlazo(pl.p,pl.u)}</div></div><div class="mono">${corto(finPro)}</div></div>`:''}
+  </div>
+  ${t==='pp'?'<div class="note">La prisión preventiva puede prolongarse por resolución judicial (art. 274 CPP). Descuenta del cómputo los periodos que no se deban computar según el art. 275 CPP.</div>':''}
+  <p class="hint">Se cuentan días calendario. Los plazos en meses vencen el mismo día del mes final.</p>`;
+}
+
+// ---------- DILIGENCIAS PRELIMINARES CON DISPOSICIONES POSTERIORES
+let disp = [{f:'2026-07-25',n:60,u:'d',cal:'='},{f:'2026-09-20',n:4,u:'m',cal:'x'}];
+const TOPE = {x:{n:8,u:'m',txt:'8 meses para investigaciones complejas, criterio jurisprudencial de la Casación 144-2012, Áncash (no figura en el texto del art. 334.2 CPP)'}, o:{n:36,u:'m',txt:'36 meses para organización criminal, criterio jurisprudencial por analogía con el art. 342.2 CPP (la Ley 30077, art. 5, fija 60 días y permite al fiscal un plazo distinto)'}};
+const sumar = (d,n,u) => u==='d' ? addDays(d,n) : addMonths(d,n);
+function calcDP(ini, n0, u0, cal0, lista){
+  let cal = cal0, venc = sumar(ini,n0,u0); const pasos=[], avisos=[];
+  const tope0 = TOPE[cal] ? sumar(ini,TOPE[cal].n,TOPE[cal].u) : null;
+  if(tope0 && venc > tope0){ avisos.push(`El plazo inicial supera el máximo de ${TOPE[cal].txt}. Se considera hasta el ${corto(tope0)}.`); venc = tope0; }
+  pasos.push({t:'Disposición de inicio', d:`${corto(ini)} · ${txtPlazo(n0,u0)}`, venc});
+  const orden = lista.map((r,i)=>({...r,i,fd:D(r.f)})).filter(r=>r.fd && r.n>0).sort((a,b)=>a.fd-b.fd);
+  orden.forEach((r,k)=>{
+    const nombre = `Disposición ${k+2}`;
+    const calTxt = r.cal==='x' ? ' · declara compleja' : r.cal==='o' ? ' · declara criminalidad organizada' : '';
+    if(r.fd < ini){ avisos.push(`La ${nombre.toLowerCase()} (${corto(r.fd)}) es anterior a la disposición de inicio. Revisa la fecha.`); pasos.push({t:nombre, d:`${corto(r.fd)} · fecha inválida`, venc, anul:true}); return; }
+    if(r.fd > venc){ avisos.push(`La ${nombre.toLowerCase()} se emitió el ${corto(r.fd)}, con el plazo ya vencido el ${corto(venc)}. Según la Casación 134-2012, Áncash, no procede ampliar un plazo vencido, así que no se suma. La Corte Suprema lo trata como un plazo impropio: su vencimiento no anula por sí solo las actuaciones, pero habilita pedir el control de plazo (Apelación 251-2022).`); pasos.push({t:nombre, d:`${corto(r.fd)} · amplía ${txtPlazo(r.n,r.u)}${calTxt} · emitida con plazo vencido`, venc:sumar(venc,r.n,r.u), anul:true}); return; }
+    if(r.cal!=='=') cal = r.cal;
+    let nv = sumar(venc, r.n, r.u);
+    const tope = TOPE[cal] ? sumar(ini,TOPE[cal].n,TOPE[cal].u) : null;
+    let extra = '';
+    if(tope && nv > tope){ avisos.push(`Con la ${nombre.toLowerCase()} el plazo llegaría al ${corto(nv)} y supera el máximo de ${TOPE[cal].txt}, contado desde el inicio. Se considera hasta el ${corto(tope)}.`); nv = tope; extra=' · recortado al tope'; }
+    venc = nv;
+    pasos.push({t:nombre, d:`${corto(r.fd)} · amplía ${txtPlazo(r.n,r.u)}${calTxt}${extra}`, venc});
+  });
+  const tope = TOPE[cal] ? sumar(ini,TOPE[cal].n,TOPE[cal].u) : null;
+  return {venc, pasos, avisos, cal, tope, total: diffDays(ini, venc)};
+}
+function dibujarFilas(){
+  $('dp-rows').innerHTML = disp.map((r,i)=>`<div class="disp">
+    <div class="disp-h"><span class="lbl">Disposición posterior ${i+1}</span><button type="button" class="link" data-del="${i}">Quitar</button></div>
+    <div class="row3">
+      <div class="field"><label for="d-f-${i}">Fecha</label><input type="date" id="d-f-${i}" data-i="${i}" data-k="f" value="${r.f}"></div>
+      <div class="field"><label for="d-n-${i}">Amplía por</label><input type="number" min="1" step="1" inputmode="numeric" id="d-n-${i}" data-i="${i}" data-k="n" value="${r.n}"></div>
+      <div class="field"><label for="d-u-${i}">Unidad</label><select id="d-u-${i}" data-i="${i}" data-k="u"><option value="d"${r.u==='d'?' selected':''}>días</option><option value="m"${r.u==='m'?' selected':''}>meses</option></select></div>
+    </div>
+    <div class="field"><label for="d-c-${i}">Calificación</label><select id="d-c-${i}" data-i="${i}" data-k="cal"><option value="="${r.cal==='='?' selected':''}>Sin cambio</option><option value="x"${r.cal==='x'?' selected':''}>Declara compleja</option><option value="o"${r.cal==='o'?' selected':''}>Declara criminalidad organizada</option></select></div>
+  </div>`).join('');
+}
+function renderDP(){
+  const ini=D($('i-ini').value), out=$('r-inv');
+  if(!ini){ out.innerHTML='<h2>Resultado</h2><p class="hint">Ingresa la fecha de la disposición de inicio.</p>'; return; }
+  const r = calcDP(ini, Math.max(1,+$('dp-n').value||60), $('dp-u').value, $('i-comp').value, disp);
+  const calNom = {c:'común', x:'compleja', o:'de criminalidad organizada'}[r.cal];
+  out.innerHTML = `<h2>Resultado</h2>
+  <div class="big"><span class="k">Diligencias preliminares · investigación ${calNom}</span><span class="v">Vence el ${largo(r.venc)}</span><span>${restante(r.venc)}</span></div>
+  <div class="lines">${r.pasos.map(p=>`<div class="line${p.anul?' anul':''}"><div>${p.t}<div class="d">${p.d}</div></div><div class="mono">${corto(p.venc)}</div></div>`).join('')}
+    <div class="line"><div>Duración total desde el inicio</div><div class="mono">${r.total} días</div></div>
+    ${r.tope?`<div class="line"><div>Máximo de referencia<div class="d">${TOPE[r.cal].txt}</div></div><div class="mono">${corto(r.tope)}</div></div>`:''}
+  </div>
+  ${r.avisos.map(a=>`<div class="note">${a}</div>`).join('')}
+  ${r.cal!=='c'?'<p class="hint">La Corte Suprema cuenta todo el tiempo transcurrido desde la disposición de inicio, no desde la declaración de complejidad, y trata cada ampliación como un periodo sucesivo (Apelación 251-2022 y Apelación 63-2024, Cusco).</p>':''}
+  ${r.cal==='c'?'<p class="hint">En una investigación común, el fiscal puede fijar un plazo distinto de 60 días por disposición motivada (art. 334.2 CPP), respetando el plazo razonable.</p>':''}
+  <p class="hint">Se cuentan días calendario. Si una disposición indica que el nuevo plazo corre desde su emisión y no desde el vencimiento anterior, ingrésalo como una disposición con la fecha correspondiente y ajusta el plazo.</p>`;
+}
+$('dp-rows').addEventListener('input', e=>{ const el=e.target; if(el.dataset.i===undefined) return; const r=disp[+el.dataset.i]; r[el.dataset.k] = el.dataset.k==='n' ? +el.value : el.value; });
+$('dp-rows').addEventListener('click', e=>{ const b=e.target.closest('[data-del]'); if(!b) return; disp.splice(+b.dataset.del,1); dibujarFilas(); if(!esPago()) libre.inv=false; refrescar(); });
+$('dp-add').addEventListener('click', ()=>{ disp.push({f:'',n:60,u:'d',cal:'='}); dibujarFilas(); if(!esPago()) libre.inv=false; refrescar(); const last=$('d-f-'+(disp.length-1)); if(last) last.focus(); });
+dibujarFilas();
+
+// ---------- ACCESO: cuenta, cálculos gratis y suscripción
+const A = { estado:'cargando', email:null, usos:0, limite:3, pagadoHasta:null, token:null, precio:9, clientId:'' };
+const libre = {pres:true, rec:true, inv:true}; // el ejemplo inicial se muestra sin consumir cálculos
+const TAB_DE_FORM = {'f-pres':'pres','f-rec':'rec','f-inv':'inv'};
+const OUT = {pres:'r-pres', rec:'r-rec', inv:'r-inv'};
+const esPago = () => A.estado==='pago';
+const restantes = () => Math.max(0, A.limite - A.usos);
+
+function aplicarCandado(){
+  for(const t of ['pres','rec','inv']){
+    if(esPago() || libre[t]) continue;
+    const msg = A.estado==='gratis'
+      ? `Presiona <b>Calcular</b> para ver el resultado. Te quedan ${restantes()} de ${A.limite} cálculos gratis este mes.`
+      : `Inicia sesión con Google (arriba) para usar tus ${A.limite} cálculos gratis del mes.`;
+    $(OUT[t]).innerHTML = `<h2>Resultado</h2><p class="hint">${msg}</p>`;
+  }
+}
+function refrescar(){ renderPres(); renderRec(); renderInv(); aplicarCandado(); }
+
+async function api(path, opts={}){
+  const headers = {'Content-Type':'application/json'};
+  if(A.token) headers.Authorization = 'Bearer '+A.token;
+  try{
+    const r = await fetch('/api/'+path, {...opts, headers});
+    let data = {}; try{ data = await r.json(); }catch{}
+    return {status:r.status, data};
+  }catch{ return {status:0, data:{}}; }
+}
+function guardarToken(t){ A.token=t; try{ t ? sessionStorage.setItem('cp_tok',t) : sessionStorage.removeItem('cp_tok'); }catch{} }
+function aviso(txt){ const el=$('aviso'); el.hidden=!txt; el.textContent=txt||''; }
+
+function pintarCuenta(){
+  const est=$('cuenta-est'), sub=$('btn-sub');
+  $('g-btn').hidden = A.estado!=='anon';
+  $('btn-salir').hidden = !(A.estado==='gratis' || A.estado==='pago');
+  sub.hidden = false; sub.textContent = `Suscribirme por S/ ${A.precio} al mes`;
+  $('pw-precio').textContent = `S/ ${A.precio}`;
+  if(A.estado==='anon') est.innerHTML = `<b>${A.limite} cálculos gratis al mes.</b> Inicia sesión con Google para usarlos.`;
+  else if(A.estado==='gratis') est.innerHTML = `${A.email} · te quedan <b>${restantes()} de ${A.limite}</b> cálculos gratis este mes`;
+  else if(A.estado==='pago'){
+    const f = new Date(A.pagadoHasta), dias = Math.ceil((f - Date.now())/864e5);
+    est.innerHTML = `${A.email} · suscripción activa hasta el <b>${f.toLocaleDateString('es-PE',{timeZone:'America/Lima'})}</b>` + (dias<=5 ? ` · <span class="pill warn">vence en ${dias} ${dias===1?'día':'días'}</span>` : '');
+    sub.hidden = dias>5; sub.textContent = `Renovar por S/ ${A.precio}`;
+  } else { est.textContent='Cargando tu cuenta…'; sub.hidden=true; }
+}
+
+async function cargarCuenta(){
+  if(!A.token){ A.estado='anon'; pintarCuenta(); refrescar(); return; }
+  const {status, data} = await api('me');
+  if(status!==200){ guardarToken(null); A.estado='anon'; }
+  else Object.assign(A, data);
+  pintarCuenta(); refrescar();
+}
+
+function abrirPaywall(motivo){
+  $('pw-motivo').textContent = motivo || '';
+  $('pw-msg').textContent = A.estado==='anon' ? 'Primero inicia sesión con Google con el botón de arriba.' : '';
+  $('paywall').hidden = false;
+  $('paywall').scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'center'});
+}
+$('btn-sub').addEventListener('click', ()=>abrirPaywall(''));
+$('pw-cerrar').addEventListener('click', ()=>{ $('paywall').hidden = true; });
+$('pw-pagar').addEventListener('click', async ()=>{
+  if(A.estado==='anon' || !A.token){ $('pw-msg').textContent='Primero inicia sesión con Google con el botón de arriba.'; return; }
+  const b=$('pw-pagar'); b.disabled=true; $('pw-msg').textContent='Abriendo Mercado Pago…';
+  const {status, data} = await api('pagar', {method:'POST', body: JSON.stringify({cupon: $('pw-cupon').value})});
+  if(status===200 && data.url){ location.href = data.url; return; }
+  b.disabled=false;
+  $('pw-msg').textContent = status===401 ? 'Tu sesión expiró. Inicia sesión de nuevo.' : (data.error || 'No se pudo iniciar el pago. Revisa tu conexión e inténtalo de nuevo.');
+  if(status===401){ guardarToken(null); A.estado='anon'; pintarCuenta(); }
+});
+$('btn-salir').addEventListener('click', ()=>{
+  try{ google.accounts.id.disableAutoSelect(); }catch{}
+  guardarToken(null); A.estado='anon'; A.email=null; libre.pres=libre.rec=libre.inv=false; pintarCuenta(); refrescar();
+});
+
+async function calcular(tab){
+  if(esPago()){ libre[tab]=true; refrescar(); return; }
+  if(A.estado!=='gratis'){ $(OUT[tab]).innerHTML='<h2>Resultado</h2><p class="hint">Inicia sesión con Google (arriba) para usar tus cálculos gratis.</p>'; $('cuenta').scrollIntoView({block:'center'}); return; }
+  const {status, data} = await api('usar', {method:'POST'});
+  if(status===401){ guardarToken(null); A.estado='anon'; pintarCuenta(); refrescar(); return; }
+  if(status===0){ $(OUT[tab]).innerHTML='<h2>Resultado</h2><p class="hint">Sin conexión. Revisa tu internet e inténtalo de nuevo.</p>'; return; }
+  if(data.estado) Object.assign(A, data);
+  pintarCuenta();
+  if(data.ok){ libre[tab]=true; refrescar(); }
+  else abrirPaywall(`Usaste tus ${A.limite} cálculos gratis de este mes. Con la suscripción calculas sin límite.`);
+}
+
+function onGoogle(resp){ guardarToken(resp.credential); aviso(''); cargarCuenta(); }
+
+async function trasPago(){
+  const qs = new URLSearchParams(location.search), st = qs.get('pago');
+  if(!st) return;
+  history.replaceState(null, '', location.pathname);
+  if(st==='ok'){
+    const pid = qs.get('payment_id');
+    aviso('Procesando tu pago…');
+    for(let i=0; i<10; i++){
+      if(A.token){
+        if(pid) await api('confirmar', {method:'POST', body: JSON.stringify({payment_id: pid})});
+        await cargarCuenta();
+        if(esPago()){ aviso('Listo: tu suscripción está activa.'); $('paywall').hidden=true; return; }
+      }
+      await new Promise(r=>setTimeout(r,3000));
+    }
+    aviso('Recibimos tu pago, pero aún no se activa. Recarga la página en unos minutos; si sigue igual, escríbenos.');
+  } else if(st==='pendiente') aviso('Tu pago está pendiente de confirmación. Tu suscripción se activará sola cuando Mercado Pago lo apruebe.');
+  else aviso('El pago no se completó. Puedes intentarlo de nuevo.');
+}
+
+async function iniciar(){
+  try{ A.token = sessionStorage.getItem('cp_tok'); }catch{}
+  const {data} = await api('config');
+  A.clientId = data.googleClientId || ''; A.precio = data.precio || 9; A.limite = data.limite || 3;
+  if(data.contacto) $('contacto').textContent = 'Soporte: ' + data.contacto;
+  const conectarGoogle = () => {
+    if(!A.clientId || !window.google?.accounts?.id) return false;
+    google.accounts.id.initialize({client_id:A.clientId, callback:onGoogle, auto_select:true});
+    google.accounts.id.renderButton($('g-btn'), {theme:'outline', size:'large', text:'signin_with', locale:'es'});
+    if(!A.token) google.accounts.id.prompt();
+    return true;
+  };
+  if(!conectarGoogle()){ let n=0; const t=setInterval(()=>{ if(conectarGoogle() || ++n>40) clearInterval(t); }, 250); }
+  await cargarCuenta();
+  await trasPago();
+}
+
+// ---------- pestañas y eventos
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  ['pres','rec','inv'].forEach(k=>$('tab-'+k).hidden = k!==b.dataset.tab);
+}));
+['f-pres','f-rec','f-inv'].forEach(f=>{
+  $(f).addEventListener('input',()=>{ if(!esPago()) libre[TAB_DE_FORM[f]]=false; refrescar(); });
+  $(f).addEventListener('submit',e=>{ e.preventDefault(); calcular(TAB_DE_FORM[f]); });
+});
+document.querySelectorAll('form').forEach(f=>f.addEventListener('input',()=>{ const s=f.querySelector('.sample'); if(s) s.hidden=true; },{once:true}));
+refrescar();
+iniciar();
+</script>
+
+</body>
+</html>
