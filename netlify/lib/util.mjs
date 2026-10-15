@@ -6,6 +6,8 @@ export const setStoreForTests = (s) => { storeOverride = s; };
 const store = () => storeOverride || getStore({ name: "usuarios", consistency: "strong" });
 
 export const env = (k, def) => (process.env[k] ?? def);
+// ID público del botón "Iniciar sesión con Google" (no es secreto). Se puede reemplazar con la variable GOOGLE_CLIENT_ID.
+export const GOOGLE_CLIENT_ID = () => env("GOOGLE_CLIENT_ID", "1047922090543-fvuemm498fkp6p444fhfqr7jcjf4t4im.apps.googleusercontent.com");
 export const PRECIO = () => Number(env("PRECIO", "9"));
 export const PRECIO_ALERTA = () => Number(env("PRECIO_ALERTA", "6"));
 export const LIMITE = () => Number(env("LIMITE_GRATIS", "3"));
@@ -28,7 +30,7 @@ export async function usuarioDesdeToken(req) {
   const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(tok));
   if (!r.ok) return null;
   const p = await r.json();
-  if (!p.email || p.aud !== env("GOOGLE_CLIENT_ID")) return null;
+  if (!p.email || p.aud !== GOOGLE_CLIENT_ID()) return null;
   if (!(p.email_verified === true || p.email_verified === "true")) return null;
   if (Number(p.exp) * 1000 < Date.now()) return null;
   return { email: String(p.email).toLowerCase() };
